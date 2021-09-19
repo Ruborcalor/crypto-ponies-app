@@ -1,4 +1,5 @@
 import Intro from '@/components/Intro'
+import Pony from '@/components/Pony'
 // import PetSelector from '@/components/PetSelector'
 import { ethers } from 'ethers'
 import { FC, useEffect, useState } from 'react'
@@ -115,7 +116,9 @@ const Home: FC = () => {
         <div className="flex flex-wrap justify-center gap-8 max-w-5xl mx-auto">
           {['hi', 'yoyo', 'gm', 'gn'].map(pony => (
             //   <Link href={`/pet/${tokenID}`} key={tokenID}>
-            <a className="text-3xl p-4 border-4 border-current text-black dark:text-white hover:text-gray-500 dark:hover:text-gray-400 h-60 w-60 flex items-center justify-center text-center">{pony}</a>
+            <div className="text-3xl p-4 border-4 border-current text-black dark:text-white hover:text-gray-500 dark:hover:text-gray-400 h-60 w-60 flex items-center justify-center text-center">
+              <Pony body="#FFF" />
+            </div>
             //   </Link>
           ))}
           <a className="text-3xl p-4 border-4 border-current text-black dark:text-white hover:text-gray-500 dark:hover:text-gray-400 h-60 w-60 flex items-center justify-center text-center">Birth Starter Pony</a>

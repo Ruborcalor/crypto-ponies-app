@@ -39,7 +39,7 @@ contract PonyBase {
         // The Kitty's genetic code is packed into these 256-bits, the format is
         // sooper-sekret! A cat's genes never change.
         Genes genes;
-        bool isMale;
+        bool isFemale;
 
         // The timestamp from the block when this cat came into existence.
         uint64 birthTime;
@@ -124,8 +124,8 @@ contract PonyBase {
     //  Used internally inside balanceOf() to resolve ownership count.
     mapping (address => uint256) ownershipTokenCount;
 
-    /// @dev A mapping from KittyIDs to an address that has been approved to call
-    ///  transferFrom(). Each Kitty can only have one approved address for transfer
+    /// @dev A mapping from PonyIDs to an address that has been approved to call
+    ///  transferFrom(). Each Pony can only have one approved address for transfer
     ///  at any time. A zero value means no approval is outstanding.
     mapping (uint256 => address) public ponyIndexToApproved;
 
@@ -143,15 +143,20 @@ contract PonyBase {
         emit Transfer(_from, _to, _tokenId);
     }
 
-    /// @dev An internal method that creates a new kitty and stores it. This
-    ///  method doesn't do any checking and should only be called when the
-    ///  input data is known to be valid. Will generate both a Birth event
-    ///  and a Transfer event.
-    /// @param _matronId The kitty ID of the matron of this cat (zero for gen0)
-    /// @param _sireId The kitty ID of the sire of this cat (zero for gen0)
-    /// @param _generation The generation number of this cat, must be computed by caller.
-    /// @param _genes The kitty's genetic code.
-    /// @param _owner The inital owner of this cat, must be non-zero (except for the unKitty, ID 0)
+    
+    // Randomness provided by this is predicatable. Use with care!
+    function randomNumber2() internal view returns (uint) {
+        return uint(blockhash(block.number - 1));
+    }
+    
+    // returns either true or false randomly (matron int or sire int)
+    function randomBool() internal view returns (bool) {
+        if ((randomNumber2() % 2) == 0) {
+            return true;
+        }
+        return false;
+    }
+    
     function _createPony(
         uint256 _matronId,
         uint256 _sireId,
@@ -170,15 +175,16 @@ contract PonyBase {
         require(_sireId == uint256(uint32(_sireId)));
         require(_generation == uint256(uint16(_generation)));
 
-        // New kitty starts with the same cooldown as parent gen/2
+        // New kitty starts with the same cooldown as parent gen/2 
         uint16 cooldownIndex = uint16(_generation / 2);
         if (cooldownIndex > 13) {
             cooldownIndex = 13;
         }
 
+        
         Pony memory _pony = Pony({
             genes: _genes,
-            isMale: true,
+            isFemale: ((ponies.length % 2) == 0), 
             birthTime: uint64(block.timestamp),
             cooldownEndBlock: 0,
             matronId: uint32(_matronId),
@@ -302,13 +308,13 @@ contract PonyOwnership is PonyBase {
         return ownershipTokenCount[_owner];
     }
     function createPromoPony(uint256 red, uint256 blue, uint256 green,  address _owner) external {
-        address ponyOwner = _owner;
+        address kittyOwner = _owner;
         // require(promoCreatedCount < PROMO_CREATION_LIMIT);
         Color memory color = Color({red:red, blue:blue, green:green});
         Genes memory _genes = Genes({body: color, hair: color, breed: 1, pattern: 1});
 
         // promoCreatedCount++;
-        _createPony(0, 0, 0, _genes, ponyOwner);
+        _createPony(0, 0, 0, _genes, kittyOwner);
     }
 
     /// @notice Transfers a Kitty to another address. If transferring to a smart
@@ -404,6 +410,15 @@ contract PonyOwnership is PonyBase {
 
         require(owner != address(0));
     }
+    
+    function genderOf(uint256 _ponyId)
+        external 
+        view 
+        returns (bool)
+        {
+            Pony memory pony = ponies[_ponyId];
+            return pony.isFemale;
+        }
 
     /// @notice Returns a list of all Kitty IDs assigned to an address.
     /// @param _owner The owner whose Kitties we are interested in.
@@ -454,4 +469,304 @@ contract PonyOwnership is PonyBase {
 
     //     return _toString(buffer, count);
     // }
+}
+
+/// @title A facet of KittyCore that manages Kitty siring, gestation, and birth.
+/// @author Stephen Fay (stephenfay.xyz) 
+/// @dev See the PonyCore contract documentation to understand how the various contract facets are arranged.
+contract PonyBreeding is PonyOwnership {
+        /// @dev The Pregnant event is fired when two cats successfully breed and the pregnancy
+    ///  timer begins for the matron.
+    event Pregnant(address owner, uint256 matronId, uint256 sireId, uint256 cooldownEndBlock);
+
+    /// @notice The minimum payment required to use breedWithAuto(). This fee goes towards
+    ///  the gas cost paid by whatever calls giveBirth(), and can be dynamically updated by
+    ///  the COO role as the gas price changes.
+    // uint256 public autoBirthFee = 2 finney;
+
+    // Keeps track of number of pregnant kitties.
+    uint256 public pregnantPonies;
+
+    /// @dev Checks that a given kitten is able to breed. Requires that the
+    ///  current cooldown is finished (for sires) and also checks that there is
+    ///  no pending pregnancy.
+    function _isReadyToBreed(Pony memory _pon) internal view returns (bool) {
+        // In addition to checking the cooldownEndBlock, we also need to check to see if
+        // the cat has a pending birth; there can be some period of time between the end
+        // of the pregnacy timer and the birth event.
+        return (_pon.siringWithId == 0) && (_pon.cooldownEndBlock <= uint64(block.number));
+    } 
+
+    /// @dev Set the cooldownEndTime for the given Kitty, based on its current cooldownIndex.
+    ///  Also increments the cooldownIndex (unless it has hit the cap).
+    /// @param _pony A reference to the Pony in storage which needs its timer started.
+    function _triggerCooldown(Pony storage _pony) internal {
+        // Compute an estimation of the cooldown time in blocks (based on current cooldownIndex).
+        _pony.cooldownEndBlock = uint64((cooldowns[_pony.cooldownIndex]/secondsPerBlock) + block.number);
+
+        // Increment the breeding count, clamping it at 13, which is the length of the
+        // cooldowns array. We could check the array size dynamically, but hard-coding
+        // this as a constant saves gas. Yay, Solidity!
+        if (_pony.cooldownIndex < 13) {
+            _pony.cooldownIndex += 1;
+        }
+    }
+
+    /// @dev Checks to see if a given Pony is a female and is pregnant and (if so) if the gestation
+    ///  period has passed.
+    function _isReadyToGiveBirth(Pony memory _matron) private pure returns (bool) {
+        return (_matron.siringWithId != 0) && (_matron.isFemale);
+    }
+
+    /// @notice Checks that a given kitten is able to breed (i.e. it is not pregnant or
+    ///  in the middle of a siring cooldown).
+    /// @param _ponyId reference the id of the kitten, any user can inquire about it
+    function isReadyToBreed(uint256 _ponyId)
+        public
+        view
+        returns (bool)
+    {
+        require(_ponyId > 0);
+        Pony storage pon = ponies[_ponyId];
+        return _isReadyToBreed(pon);
+    }
+
+    /// @dev Checks whether a kitty is currently pregnant.
+    /// @param _ponyId reference the id of the kitten, any user can inquire about it
+    function isPregnant(uint256 _ponyId)
+        public
+        view
+        returns (bool)
+    {
+        require(_ponyId > 0);
+        // A pony is pregnant if and only if this field is set
+        return ponies[_ponyId].siringWithId != 0;
+    }
+
+    /// @dev Internal check to see if a given sire and matron are a valid mating pair. DOES NOT
+    ///  check ownership permissions (that is up to the caller).
+    /// @param _matron A reference to the Kitty struct of the potential matron.
+    /// @param _matronId The matron's ID.
+    /// @param _sire A reference to the Kitty struct of the potential sire.
+    /// @param _sireId The sire's ID
+    function _isValidMatingPair(
+        Pony storage _matron,
+        uint256 _matronId,
+        Pony storage _sire,
+        uint256 _sireId
+    )
+        private
+        view
+        returns(bool)
+    {
+        // A Pony can't breed with itself!
+        if (_matronId == _sireId) {
+            return false;
+        }
+
+        return (_matron.isFemale != _sire.isFemale);
+    }
+
+    /// @notice Checks to see if two cats can breed together, including checks for
+    ///  ownership and siring approvals. Does NOT check that both cats are ready for
+    ///  breeding (i.e. breedWith could still fail until the cooldowns are finished).
+    ///  TODO: Shouldn't this check pregnancy and cooldowns?!?
+    /// @param _matronId The ID of the proposed matron.
+    /// @param _sireId The ID of the proposed sire.
+    function canBreedWith(uint256 _matronId, uint256 _sireId)
+        external
+        view
+        returns(bool)
+    {
+        require(_matronId > 0);
+        require(_sireId > 0);
+        Pony storage matron = ponies[_matronId];
+        Pony storage sire = ponies[_sireId];
+        return _isValidMatingPair(matron, _matronId, sire, _sireId);
+    }
+
+    /// @dev Internal utility function to initiate breeding, assumes that all breeding
+    ///  requirements have been checked.
+    function _breedWith(uint256 _matronId, uint256 _sireId) internal {
+        // Grab a reference to the Kitties from storage.
+        Pony storage sire = ponies[_sireId];
+        Pony storage matron = ponies[_matronId];
+
+        // Mark the matron as pregnant, keeping track of who the sire is.
+        matron.siringWithId = uint32(_sireId);
+
+        // Trigger the cooldown for both parents.
+        _triggerCooldown(sire);
+        _triggerCooldown(matron);
+
+        pregnantPonies++;
+
+        // Emit the pregnancy event.
+        emit Pregnant(ponyIndexToOwner[_matronId], _matronId, _sireId, matron.cooldownEndBlock);
+    }
+
+    /// @notice Breed a Kitty you own (as matron) with a sire that you own, or for which you
+    ///  have previously been given Siring approval. Will either make your cat pregnant, or will
+    ///  fail entirely. Requires a pre-payment of the fee given out to the first caller of giveBirth()
+    /// @param _matronId The ID of the Kitty acting as matron (will end up pregnant if successful)
+    /// @param _sireId The ID of the Kitty acting as sire (will begin its siring cooldown if successful)
+    function breed(uint256 _matronId, uint256 _sireId) 
+        external
+    {
+        // do a few checks, matron is just the pony used
+        // Caller must own the matron.
+        require(_owns(msg.sender, _matronId));
+
+        // Grab a reference to the potential matron
+        Pony storage matron = ponies[_matronId];
+
+        // Make sure matron isn't pregnant, or in the middle of a siring cooldown
+        require(_isReadyToBreed(matron));
+
+        // Grab a reference to the potential sire
+        Pony storage sire = ponies[_sireId];
+
+        // Make sure sire isn't pregnant, or in the middle of a siring cooldown
+        require(_isReadyToBreed(sire));
+
+        // Test that these cats are a valid mating pair.
+        require(_isValidMatingPair(
+            matron,
+            _matronId,
+            sire,
+            _sireId
+        ));
+
+        // All checks passed, pony gets pregnant!
+        _breedWith(_matronId, _sireId);
+    }
+
+    
+    // Randomness provided by this is predicatable. Use with care!
+    function randomNumber() internal view returns (uint) {
+        return uint(blockhash(block.number - 1));
+    }
+    
+    // returns either m or s randomly (matron int or sire int)
+    function randomChoice(uint8 m, uint8 s) internal view returns (uint8) {
+        if ((randomNumber() % 2) == 0) {
+            return m;
+        }
+        return s;
+    }
+
+
+    function mean(uint256 a, uint256 b) internal pure returns (uint256) {
+        return uint256((a + b)/2);
+    }
+
+    // can use this instead of mean
+    function randMean(uint256 a, uint256 b) internal view returns (uint256) {
+        return (uint256((a + b)/2) + ((randomNumber() % 30) - 15)) % 255;
+    }
+
+    function linearInterpolation(Color memory a, Color memory b) internal pure returns (Color memory) {
+        Color memory newColor = Color({red:mean(a.red , b.red),
+            green:mean(a.green , b.green),
+            blue:mean(a.blue , b.blue)});
+        return newColor;
+    }
+    
+    function giveBirth(uint256 _matronId)
+        external
+        returns(uint256)
+    {
+        // Grab a reference to the matron in storage.
+        Pony storage matron = ponies[_matronId];
+        uint256 _sireId = matron.siringWithId;
+
+        // Check that the matron is a valid pony.
+        require(matron.birthTime != 0);
+
+        // Check that the matron is pregnant, and that its time has come!
+        require(_isReadyToGiveBirth(matron));
+
+        // Grab a reference to the sire in storage.
+        uint256 sireId = matron.siringWithId;
+        Pony storage sire = ponies[sireId];
+
+        // Determine the higher generation number of the two parents
+        uint16 parentGen = matron.generation;
+        if (sire.generation > matron.generation) {
+            parentGen = sire.generation;
+        }
+
+        Genes memory childGenes = Genes({
+            body: linearInterpolation(matron.genes.body, sire.genes.body),
+            hair: linearInterpolation(matron.genes.hair, sire.genes.hair),
+            breed: randomChoice(matron.genes.breed, sire.genes.breed),
+            pattern: randomChoice(matron.genes.pattern, sire.genes.pattern)
+        });
+
+        // Make the new pony!
+        address owner = ponyIndexToOwner[_sireId]; // the matron is the first guy that we pass, sire must be owner
+        uint256 ponyId = _createPony(_matronId, matron.siringWithId, parentGen + 1, childGenes, owner);
+
+        // Clear the reference to sire from the matron (REQUIRED! Having siringWithId
+        // set is what marks a matron as being pregnant.)
+        delete matron.siringWithId;
+
+        // Every time a kitty gives birth counter is decremented.
+        pregnantPonies--;
+
+        // Send the balance fee to the person who made birth happen.
+        // msg.sender.send(autoBirthFee);
+
+        // return the new kitten's ID
+        return ponyId;
+    }
+    
+    function giveBirthForce(uint256 _matronId)
+        external
+        returns(uint256)
+    {
+        // Grab a reference to the matron in storage.
+        Pony storage matron = ponies[_matronId];
+        uint256 _sireId = matron.siringWithId;
+
+        // Check that the matron is a valid pony.
+        require(matron.birthTime != 0);
+
+        // Check that the matron is pregnant, and that its time has come!
+        require(_isReadyToGiveBirth(matron));
+
+        // Grab a reference to the sire in storage.
+        uint256 sireId = matron.siringWithId;
+        Pony storage sire = ponies[sireId];
+
+        // Determine the higher generation number of the two parents
+        uint16 parentGen = matron.generation;
+        if (sire.generation > matron.generation) {
+            parentGen = sire.generation;
+        }
+
+        Genes memory childGenes = Genes({
+            body: linearInterpolation(matron.genes.body, sire.genes.body),
+            hair: linearInterpolation(matron.genes.hair, sire.genes.hair),
+            breed: randomChoice(matron.genes.breed, sire.genes.breed),
+            pattern: randomChoice(matron.genes.pattern, sire.genes.pattern)
+        });
+
+        // Make the new pony!
+        address owner = ponyIndexToOwner[_sireId]; // the matron is the first guy that we pass, sire must be owner
+        uint256 ponyId = _createPony(_matronId, matron.siringWithId, parentGen + 1, childGenes, owner);
+
+        // Clear the reference to sire from the matron (REQUIRED! Having siringWithId
+        // set is what marks a matron as being pregnant.)
+        delete matron.siringWithId;
+
+        // Every time a kitty gives birth counter is decremented.
+        pregnantPonies--;
+
+        // Send the balance fee to the person who made birth happen.
+        // msg.sender.send(autoBirthFee);
+
+        // return the new kitten's ID
+        return ponyId;
+    }
 }

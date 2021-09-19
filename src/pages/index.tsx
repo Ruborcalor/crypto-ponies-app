@@ -7,7 +7,7 @@ import abi from '../abi/Wagmipet.json'
 
 // import { Wagmipet__factory as Wagmipet, Wagmipet as Wagmiabi } from '@/contracts'
 
-const contractAddress = '0x953D7a9a37256c9c398816b9D967B20D443f817b'
+const contractAddress = '0x40aA75Ed48ab1af497C4Dbd2380ddFBF54869AA3' // '0x953D7a9a37256c9c398816b9D967B20D443f817b'
 
 const contractABI = abi.abi
 

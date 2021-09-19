@@ -17,6 +17,8 @@ const Home: FC = () => {
   const [userAddress, setUserAddress] = useState<string>('')
   const [contract, setContract] = useState(null)
   const [ponies, setPonies] = useState([])
+  const [name, setName] = useState('')
+  const [showModal, setShowModal] = useState(false)
   // const contract = useMemo<Wagmiabi>(() => Wagmipet.connect(process.env.NEXT_PUBLIC_CONTRACT_ADDRESS, new ethers.providers.JsonRpcProvider(`https://polygon-mainnet.infura.io/v3/${process.env.NEXT_PUBLIC_INFURA_ID}`)), [])
 
   // const { data: petList, mutate: mutatePetList } = useSWR<Record<number, string>>(
@@ -99,32 +101,106 @@ const Home: FC = () => {
     setPonies(tmpPonies)
   }
 
+  const birthPony = async event => {
+    event.preventDefault()
+    // Who is paying the gas fees for the transaction?
+    const waveTxn = await contract.wave(name)
+    console.log('Mining...', waveTxn.hash)
+    await waveTxn.wait()
+    console.log('Mined -- ', waveTxn.hash)
+  }
+
   const PonyViewer: FC<{}> = () => {
     return (
-      <div className="flex flex-col items-center justify-center space-y-8">
-        <h1 className="text-5xl md:text-7xl text-center dark:text-white">Crypto Ponies</h1>
-        <br />
-        <h3 className="text-base md:text-5xl text-center dark:text-white">Your Ponies</h3>
-        <br />
-        {/* <p className="max-w-xs md:max-w-prose text-2xl md:text-3xl text-center dark:text-white">
+      <>
+        <div className="flex flex-col items-center justify-center space-y-8">
+          <h1 className="text-5xl md:text-7xl text-center dark:text-white">Crypto Ponies</h1>
+          <br />
+          <h3 className="text-base md:text-5xl text-center dark:text-white">Your Ponies</h3>
+          <br />
+          {/* <p className="max-w-xs md:max-w-prose text-2xl md:text-3xl text-center dark:text-white">
           Choose one of your $PETs below to visit them, or{' '}
           <button onClick={() => setPetList([], false)} className="underline hover:text-gray-500 dark:hover:text-gray-400">
           adopt a new one
         </button>
           .
         </p> */}
-        <div className="flex flex-wrap justify-center gap-8 max-w-5xl mx-auto">
-          {['hi', 'yoyo', 'gm', 'gn'].map(pony => (
-            //   <Link href={`/pet/${tokenID}`} key={tokenID}>
-            <div className="text-3xl p-4 border-4 border-current text-black dark:text-white hover:text-gray-500 dark:hover:text-gray-400 h-60 w-60 flex items-center justify-center text-center">
-              <Pony body="#FFF" />
-            </div>
-            //   </Link>
-          ))}
-          <a className="text-3xl p-4 border-4 border-current text-black dark:text-white hover:text-gray-500 dark:hover:text-gray-400 h-60 w-60 flex items-center justify-center text-center">Birth Starter Pony</a>
+          <div className="flex flex-wrap justify-center gap-8 max-w-5xl mx-auto">
+            {ponies.map(pony => (
+              //   <Link href={`/pet/${tokenID}`} key={tokenID}>
+              <div>
+                <div className="text-3xl p-4 border-4 border-current text-black dark:text-white hover:text-gray-500 dark:hover:text-gray-400 h-60 w-60 flex items-center justify-center text-center">
+                  <div style={{ transform: 'scale(0.5)' }}>
+                    <Pony body="#FFF" />
+                  </div>
+                </div>
+                <p className="dark:text-white text-center">{pony.message}</p>
+              </div>
+              //   </Link>
+            ))}
+            <button className="text-3xl p-4 border-4 border-current text-black dark:text-white hover:text-gray-500 dark:hover:text-gray-400 h-60 w-60 flex items-center justify-center text-center" onClick={() => setShowModal(true)}>
+              Birth Starter Pony
+            </button>
+          </div>
         </div>
-      </div>
+        {showModal && (
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full m-0" id="my-modal" onClick={() => setShowModal(false)}>
+            <div className="relative top-80 mx-auto p-5 border-4 w-96 shadow-lg bg-black" onClick={event => event.stopPropagation()}>
+              <div className="mt-3 text-center">
+                {/* <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100">
+                <svg className="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+              </div> */}
+                <h3 className="text-5xl leading-6 text-white">Birth Pet</h3>
+                <br />
+
+                <form onSubmit={birthPony} className="flex flex-col w-full max-w-sm">
+                  <input
+                    className="text-3xl py-1 px-4 text-center border-4 border-current text-black dark:text-white dark:bg-black focus:outline-none focus-visible:ring"
+                    type="text"
+                    placeholder="Your awesome new pet"
+                    onChange={event => {
+                      event.preventDefault()
+                      setName((event.target as HTMLInputElement).value)
+                    }}
+                    value={name}
+                    required
+                  />
+                  <button type="submit" className="text-3xl p-1 border-4 border-t-0 border-current text-black dark:text-white hover:text-gray-500 dark:hover:text-gray-400">
+                    Birth
+                  </button>
+                </form>
+                {/* <div className="mt-2 px-7 py-3">
+                <p className="text-sm text-gray-500">Account has been successfully registered!</p>
+              </div>
+              <div className="items-center px-4 py-3">
+                <button id="ok-btn" className="px-4 py-2 bg-black text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-300">
+                  OK
+                </button>
+              </div> */}
+              </div>
+            </div>
+          </div>
+        )}
+      </>
     )
+  }
+
+  if (typeof window === 'object') {
+    // Check if document is finally loaded
+    document.addEventListener('DOMContentLoaded', function () {
+      // Grabs all the Elements by their IDs which we had given them
+      let modal = document.getElementById('my-modal')
+
+      // The modal will close when the user clicks anywhere outside the modal
+      window.onclick = function (event) {
+        if (event.target == modal) {
+          setShowModal(false)
+          //   modal.style.display = 'none'
+        }
+      }
+    })
   }
 
   useEffect(() => {

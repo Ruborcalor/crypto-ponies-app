@@ -86,14 +86,14 @@ const Home: FC = () => {
   }
 
   const getPonies = async () => {
-    let ponies = await contract.tokensOfOwner(userAddress)
+    const ponies = await contract.tokensOfOwner(userAddress)
 
     console.log(ponies)
 
-    let tmpPonies = []
+    const tmpPonies = []
     for (let i = 0; i < ponies.length; i++) {
       const pony = ponies[i]
-      let thisPony = await contract.getPony(pony.toNumber())
+      const thisPony = await contract.getPony(pony.toNumber())
       console.log(`rgb(${thisPony.genes.body.red.toNumber()}, ${thisPony.genes.body.green.toNumber()}, ${thisPony.genes.body.blue.toNumber()}`)
       // genes.body.blue/red/green
       tmpPonies.push(`rgb(${thisPony.genes.body.red.toNumber()}, ${thisPony.genes.body.green.toNumber()}, ${thisPony.genes.body.blue.toNumber()}`)
@@ -113,7 +113,7 @@ const Home: FC = () => {
     console.log('Mined -- ', waveTxn.hash)
   }
 
-  const PonyViewer: FC<{}> = () => {
+  const PonyViewer: FC<any> = () => {
     return (
       <>
         <div className="flex flex-col items-center justify-center space-y-8">
@@ -129,9 +129,9 @@ const Home: FC = () => {
           .
         </p> */}
           <div className="flex flex-wrap justify-center gap-8 max-w-5xl mx-auto">
-            {ponies.map(pony => (
+            {ponies.map((pony, index) => (
               //   <Link href={`/pet/${tokenID}`} key={tokenID}>
-              <div>
+              <div key={index}>
                 <div className="text-3xl p-4 border-4 border-current text-black dark:text-white hover:text-gray-500 dark:hover:text-gray-400 h-60 w-60 flex items-center justify-center text-center">
                   <div style={{ transform: 'scale(0.5)' }}>
                     <Pony body={pony} />

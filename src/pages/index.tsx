@@ -37,7 +37,7 @@ const Home: FC = () => {
   // }, [web3])
 
   const connectWallet = () => {
-    const { ethereum } = window
+    const { ethereum } = window as any
     if (!ethereum) {
       alert('Get metamask!')
     }
@@ -47,7 +47,7 @@ const Home: FC = () => {
         const account = accounts[0]
         console.log('Found an authorized account: ', account)
 
-        const provider = new ethers.providers.Web3Provider(window.ethereum)
+        const provider = new ethers.providers.Web3Provider((window as any).ethereum)
         const signer = provider.getSigner()
         const cryptoPonyContract = new ethers.Contract(contractAddress, contractABI, signer)
 
@@ -59,7 +59,7 @@ const Home: FC = () => {
 
   const checkIfWalletIsConnected = () => {
     // First make sure we have access to window.ethereum
-    const { ethereum } = window
+    const { ethereum } = window as any
 
     if (!ethereum) {
       console.log('Make sure you have metamask!')
@@ -73,7 +73,7 @@ const Home: FC = () => {
         const account = accounts[0]
         console.log('Found an authorized account: ', account)
 
-        const provider = new ethers.providers.Web3Provider(window.ethereum)
+        const provider = new ethers.providers.Web3Provider((window as any).ethereum)
         const signer = provider.getSigner()
         const cryptoPonyContract = new ethers.Contract(contractAddress, contractABI, signer)
 

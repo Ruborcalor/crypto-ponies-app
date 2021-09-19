@@ -91,13 +91,13 @@ const Home: FC = () => {
     console.log(ponies)
 
     let tmpPonies = []
-    ponies.forEach(pony => {
-      tmpPonies.push({
-        address: pony.waver,
-        timestamp: new Date(pony.timestamp * 1000),
-        message: pony.message,
-      })
-    })
+    for (let i = 0; i < ponies.length; i++) {
+      const pony = ponies[i]
+      let thisPony = await contract.getPony(pony.toNumber())
+      console.log(`rgb(${thisPony.genes.body.red.toNumber()}, ${thisPony.genes.body.green.toNumber()}, ${thisPony.genes.body.blue.toNumber()}`)
+      // genes.body.blue/red/green
+      tmpPonies.push(`rgb(${thisPony.genes.body.red.toNumber()}, ${thisPony.genes.body.green.toNumber()}, ${thisPony.genes.body.blue.toNumber()}`)
+    }
 
     console.log(tmpPonies)
     setPonies(tmpPonies)
@@ -106,7 +106,7 @@ const Home: FC = () => {
   const birthPony = async event => {
     event.preventDefault()
     // Who is paying the gas fees for the transaction?
-    const waveTxn = await contract.createPromoPony(13, 13, 15, userAddress)
+    const waveTxn = await contract.createPromoPony(255, 0, 0, userAddress)
 
     console.log('Mining...', waveTxn.hash)
     await waveTxn.wait()
@@ -134,10 +134,10 @@ const Home: FC = () => {
               <div>
                 <div className="text-3xl p-4 border-4 border-current text-black dark:text-white hover:text-gray-500 dark:hover:text-gray-400 h-60 w-60 flex items-center justify-center text-center">
                   <div style={{ transform: 'scale(0.5)' }}>
-                    <Pony body="#FFF" />
+                    <Pony body={pony} />
                   </div>
                 </div>
-                <p className="dark:text-white text-center">{pony.message}</p>
+                <p className="dark:text-white text-center">Test</p>
               </div>
               //   </Link>
             ))}

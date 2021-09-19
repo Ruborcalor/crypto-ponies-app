@@ -18,7 +18,7 @@ const Home: FC = () => {
   const [contract, setContract] = useState(null)
   const [ponies, setPonies] = useState([])
   const [name, setName] = useState('')
-  const [showModal, setShowModal] = useState(false)
+  const [showBirthModal, setShowBirthModal] = useState(false)
   // const contract = useMemo<Wagmiabi>(() => Wagmipet.connect(process.env.NEXT_PUBLIC_CONTRACT_ADDRESS, new ethers.providers.JsonRpcProvider(`https://polygon-mainnet.infura.io/v3/${process.env.NEXT_PUBLIC_INFURA_ID}`)), [])
 
   // const { data: petList, mutate: mutatePetList } = useSWR<Record<number, string>>(
@@ -138,13 +138,13 @@ const Home: FC = () => {
               </div>
               //   </Link>
             ))}
-            <button className="text-3xl p-4 border-4 border-current text-black dark:text-white hover:text-gray-500 dark:hover:text-gray-400 h-60 w-60 flex items-center justify-center text-center" onClick={() => setShowModal(true)}>
+            <button className="text-3xl p-4 border-4 border-current text-black dark:text-white hover:text-gray-500 dark:hover:text-gray-400 h-60 w-60 flex items-center justify-center text-center" onClick={() => setShowBirthModal(true)}>
               Birth Starter Pony
             </button>
           </div>
         </div>
-        {showModal && (
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full m-0" id="my-modal" onClick={() => setShowModal(false)}>
+        {showBirthModal && (
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full m-0" id="my-modal" onClick={() => setShowBirthModal(false)}>
             <div className="relative top-80 mx-auto p-5 border-4 w-96 shadow-lg bg-black" onClick={event => event.stopPropagation()}>
               <div className="mt-3 text-center">
                 {/* <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100">
@@ -185,22 +185,6 @@ const Home: FC = () => {
         )}
       </>
     )
-  }
-
-  if (typeof window === 'object') {
-    // Check if document is finally loaded
-    document.addEventListener('DOMContentLoaded', function () {
-      // Grabs all the Elements by their IDs which we had given them
-      let modal = document.getElementById('my-modal')
-
-      // The modal will close when the user clicks anywhere outside the modal
-      window.onclick = function (event) {
-        if (event.target == modal) {
-          setShowModal(false)
-          //   modal.style.display = 'none'
-        }
-      }
-    })
   }
 
   useEffect(() => {

@@ -1,6 +1,6 @@
 const Pony = ({ body }) => {
   return (
-    <div style={{ position: `relative` }}>
+    <div style={{ position: `absolute`, transform: 'translate(-50%, -50%)' }}>
       <svg style={{ left: 2 }} width="254" height="421" viewBox="0 0 254 421" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path
           fill-rule="evenodd"

@@ -411,6 +411,38 @@ contract PonyOwnership is PonyBase {
         require(owner != address(0));
     }
     
+    /// @notice Returns all the relevant information about a specific kitty.
+    /// @param _id The ID of the kitty of interest.
+    function getPony(uint256 _id)
+        external
+        view
+        returns (
+        bool isGestating,
+        bool isReady,
+        uint256 cooldownIndex,
+        uint256 nextActionAt,
+        uint256 siringWithId,
+        uint256 birthTime,
+        uint256 matronId,
+        uint256 sireId,
+        uint256 generation,
+        Genes memory genes
+    ) {
+        Pony storage kit = ponies[_id];
+    
+        // if this variable is 0 then it's not gestating
+        isGestating = (kit.siringWithId != 0);
+        isReady = (kit.cooldownEndBlock <= block.number);
+        cooldownIndex = uint256(kit.cooldownIndex);
+        nextActionAt = uint256(kit.cooldownEndBlock);
+        siringWithId = uint256(kit.siringWithId);
+        birthTime = uint256(kit.birthTime);
+        matronId = uint256(kit.matronId);
+        sireId = uint256(kit.sireId);
+        generation = uint256(kit.generation);
+        genes = kit.genes;
+    }
+    
     function genderOf(uint256 _ponyId)
         external 
         view 
@@ -732,8 +764,8 @@ contract PonyBreeding is PonyOwnership {
         // Check that the matron is a valid pony.
         require(matron.birthTime != 0);
 
-        // Check that the matron is pregnant, and that its time has come!
-        require(_isReadyToGiveBirth(matron));
+        // // Check that the matron is pregnant, and that its time has come!
+        // require(_isReadyToGiveBirth(matron));
 
         // Grab a reference to the sire in storage.
         uint256 sireId = matron.siringWithId;
@@ -760,8 +792,8 @@ contract PonyBreeding is PonyOwnership {
         // set is what marks a matron as being pregnant.)
         delete matron.siringWithId;
 
-        // Every time a kitty gives birth counter is decremented.
-        pregnantPonies--;
+        // // Every time a kitty gives birth counter is decremented.
+        // pregnantPonies--;
 
         // Send the balance fee to the person who made birth happen.
         // msg.sender.send(autoBirthFee);

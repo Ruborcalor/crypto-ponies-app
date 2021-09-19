@@ -7,7 +7,7 @@ import abi from '../abi/Wagmipet.json'
 
 // import { Wagmipet__factory as Wagmipet, Wagmipet as Wagmiabi } from '@/contracts'
 
-const contractAddress = '0x20f229B5c27e8e164ffe54a6f9b03c56f5F4828B'
+const contractAddress = '0x953D7a9a37256c9c398816b9D967B20D443f817b'
 
 const contractABI = abi.abi
 
@@ -86,7 +86,9 @@ const Home: FC = () => {
   }
 
   const getPonies = async () => {
-    let ponies = await contract.getAllWaves()
+    let ponies = await contract.tokensOfOwner(userAddress)
+
+    console.log(ponies)
 
     let tmpPonies = []
     ponies.forEach(pony => {
@@ -104,7 +106,8 @@ const Home: FC = () => {
   const birthPony = async event => {
     event.preventDefault()
     // Who is paying the gas fees for the transaction?
-    const waveTxn = await contract.wave(name)
+    const waveTxn = await contract.createPromoPony(13, 13, 15, userAddress)
+
     console.log('Mining...', waveTxn.hash)
     await waveTxn.wait()
     console.log('Mined -- ', waveTxn.hash)

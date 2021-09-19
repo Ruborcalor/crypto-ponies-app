@@ -1,7 +1,7 @@
-import { Biconomy } from '@biconomy/mexa'
-import { KeyedMutator } from 'swr/dist/types'
-import { FC, FormEvent, useState } from 'react'
 import { Wagmipet__factory as WAGMIpet } from '@/contracts'
+import { Biconomy } from '@biconomy/mexa'
+import { FC, FormEvent, useState } from 'react'
+import { KeyedMutator } from 'swr/dist/types'
 
 const MintPet: FC<{ biconomy: Biconomy; userAddress: string; setPetList: KeyedMutator<Record<number, string>> }> = ({ biconomy, userAddress, setPetList }) => {
 	const [name, setName] = useState<string>('')

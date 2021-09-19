@@ -1,13 +1,13 @@
-import { FC } from 'react'
-import Head from 'next/head'
 import '@/styles/tailwind.css'
-import { AppProps } from 'next/app'
 import { ThemeProvider } from 'next-themes'
+import { AppProps } from 'next/app'
+import Head from 'next/head'
+import { FC } from 'react'
 
 const meta = {
-	title: 'A digital pet, on the blockchain',
-	description: 'Adopt and take care of your very own $PET on the blockchain! Feed it, play with it, clean it and make sure it gets enough sleep.',
-	url: 'https://onchain.pet',
+	title: 'Crypto Ponies, on the blockchain',
+	description: 'Adopt and breed your very own crypo ponies on the blockchain!',
+	url: 'https://cryptoponies.com',
 	image: '/images/card.jpg',
 }
 
@@ -35,14 +35,14 @@ const App: FC<AppProps> = ({ Component, pageProps }) => (
 				<div className="flex flex-1 items-center justify-center mt-4">
 					<Component {...pageProps} />
 				</div>
-				<div className="my-4">
+				{/* <div className="my-4">
 					<p className="text-xl dark:text-white">
 						Created by{' '}
 						<a className="underline" href="https://twitter.com/m1guelpf" target="_blank" rel="noreferrer">
 							Miguel Piedrafita
 						</a>
 					</p>
-				</div>
+				</div> */}
 			</div>
 		</ThemeProvider>
 	</>
